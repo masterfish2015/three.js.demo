@@ -1,6 +1,29 @@
 var ldc={};
 
+ldc.renderScene = function(){
+    ldc.stats.update();
+
+    ldc.cube.rotation.x += 0.02;
+    ldc.cube.rotation.y += 0.02;
+    ldc.cube.rotation.z += 0.02;
+
+    requestAnimationFrame(ldc.renderScene);
+    ldc.renderer.render(ldc.scene, ldc.camera);
+}
+
+ldc.initStats = function () {
+    var stats = new Stats();
+    stats.setMode(0);
+    stats.domElement.style.position = 'absolute';
+    stats.domElement.style.left = '0px';
+    stats.domElement.style.top = '0px';
+    $('#stats-output').append( stats.domElement );
+    return stats;
+}
+
 $(function () {
+    ldc.stats = ldc.initStats();
+
     ldc.scene = new THREE.Scene();
     ldc.camera = new THREE.PerspectiveCamera(45,
         window.innerWidth / window.innerHeight,
@@ -16,42 +39,42 @@ $(function () {
 
     var planeGeometry = new THREE.PlaneGeometry(60, 20);
     var planeMaterial = new THREE.MeshLambertMaterial({color: 0xffffff});
-    var plane = new THREE.Mesh(planeGeometry, planeMaterial);
-    plane.receiveShadow = true;
+    ldc.plane = new THREE.Mesh(planeGeometry, planeMaterial);
+    ldc.plane.receiveShadow = true;
 
-    plane.rotation.x = -0.5 * Math.PI ;
-    plane.position.x = 15;
-    plane.position.y = 0;
-    plane.position.z = 0;    
+    ldc.plane.rotation.x = -0.5 * Math.PI ;
+    ldc.plane.position.x = 15;
+    ldc.plane.position.y = 0;
+    ldc.plane.position.z = 0;    
 
-    ldc.scene.add(plane);
+    ldc.scene.add(ldc.plane);
 
     var cubeGeometry = new THREE.CubeGeometry(4,4,4);
     var cubeMaterial = new THREE.MeshLambertMaterial({color:0xff0000});
-    var cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-    cube.castShadow = true;
+    ldc.cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+    ldc.cube.castShadow = true;
 
-    cube.position.x = -4;
-    cube.position.y = 3;
-    cube.position.z = 0;
+    ldc.cube.position.x = -4;
+    ldc.cube.position.y = 3;
+    ldc.cube.position.z = 0;
 
-    ldc.scene.add(cube);
+    ldc.scene.add(ldc.cube);
 
     var sphereGeometry = new THREE.SphereGeometry(4,20,20);
     var sphereMaterial = new THREE.MeshPhongMaterial({color:0x7777ff});
-    var sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-    sphere.castShadow = true;
+    ldc.sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+    ldc.sphere.castShadow = true;
 
-    sphere.position.x = 20;
-    sphere.position.y = 4;
-    sphere.position.z = 2;
+    ldc.sphere.position.x = 20;
+    ldc.sphere.position.y = 4;
+    ldc.sphere.position.z = 2;
 
-    ldc.scene.add(sphere);
+    ldc.scene.add(ldc.sphere);
 
-    var spotLight = new THREE.SpotLight(0xffffff);
-    spotLight.position.set(-40, 60, -10);
-    spotLight.castShadow = true;
-    ldc.scene.add(spotLight);
+    ldc.spotLight = new THREE.SpotLight(0xffffff);
+    ldc.spotLight.position.set(-40, 60, -10);
+    ldc.spotLight.castShadow = true;
+    ldc.scene.add(ldc.spotLight);
 
     ldc.camera.position.x = -30;
     ldc.camera.position.y = 40;
@@ -59,5 +82,6 @@ $(function () {
     ldc.camera.lookAt(ldc.scene.position);
 
     $('#webgl-output').append(ldc.renderer.domElement);
-    ldc.renderer.render(ldc.scene, ldc.camera);
+    
+    ldc.renderScene();
 })
