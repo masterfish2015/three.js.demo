@@ -1,4 +1,4 @@
-var ldc={};
+var ldc={step:0};
 
 ldc.renderScene = function(){
     ldc.stats.update();
@@ -6,6 +6,10 @@ ldc.renderScene = function(){
     ldc.cube.rotation.x += 0.02;
     ldc.cube.rotation.y += 0.02;
     ldc.cube.rotation.z += 0.02;
+
+    ldc.step+=0.04;
+    ldc.sphere.position.x = 20 +(10*(Math.cos(ldc.step)));
+    ldc.sphere.position.y = 2  +(10*Math.abs(Math.sin(ldc.step)));
 
     requestAnimationFrame(ldc.renderScene);
     ldc.renderer.render(ldc.scene, ldc.camera);
