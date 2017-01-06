@@ -1,20 +1,5 @@
 var ldc={step:0};
 
-ldc.renderScene = function(){
-    ldc.stats.update();
-
-    ldc.cube.rotation.x += 0.02;
-    ldc.cube.rotation.y += 0.02;
-    ldc.cube.rotation.z += 0.02;
-
-    ldc.step+=0.04;
-    ldc.sphere.position.x = 20 +(10*(Math.cos(ldc.step)));
-    ldc.sphere.position.y = 2  +(10*Math.abs(Math.sin(ldc.step)));
-
-    requestAnimationFrame(ldc.renderScene);
-    ldc.renderer.render(ldc.scene, ldc.camera);
-}
-
 ldc.initStats = function () {
     var stats = new Stats();
     stats.setMode(0);
@@ -25,8 +10,35 @@ ldc.initStats = function () {
     return stats;
 }
 
+ldc.initControls = function(){
+    ldc.controls = new function(){
+        this.rotationSpeed = 0.02;
+        this.bouncingSpeed = 0.03;
+    };
+    var gui = new dat.GUI();
+    gui.add(ldc.controls, 'rotationSpeed', 0, 0.5);
+    gui.add(ldc.controls, 'bouncingSpeed', 0, 0.5);
+    return gui;
+}
+
+ldc.renderScene = function(){
+    ldc.stats.update();
+
+    ldc.cube.rotation.x += ldc.controls.rotationSpeed;
+    ldc.cube.rotation.y += ldc.controls.rotationSpeed;
+    ldc.cube.rotation.z += ldc.controls.rotationSpeed;
+
+    ldc.step+=ldc.controls.bouncingSpeed;
+    ldc.sphere.position.x = 20 +(10*(Math.cos(ldc.step)));
+    ldc.sphere.position.y = 2  +(10*Math.abs(Math.sin(ldc.step)));
+
+    requestAnimationFrame(ldc.renderScene);
+    ldc.renderer.render(ldc.scene, ldc.camera);
+}
+
 $(function () {
     ldc.stats = ldc.initStats();
+    ldc.gui = ldc.initControls();
 
     ldc.scene = new THREE.Scene();
     ldc.camera = new THREE.PerspectiveCamera(45,
