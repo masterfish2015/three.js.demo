@@ -63,6 +63,8 @@ $(function () {
     ldc.gui = ldc.initControls();
 
     ldc.scene = new THREE.Scene();
+    ldc.scene.fog = new THREE.Fog(0xffffff, 0.015, 100);
+    
     ldc.camera = new THREE.PerspectiveCamera(45,
         window.innerWidth / window.innerHeight,
         0.1,
