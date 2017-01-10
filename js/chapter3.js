@@ -73,7 +73,7 @@ $(function() {
         window.innerWidth / window.innerHeight,
         0.1,
         1000);
-    ldc.renderer = new THREE.WebGLRenderer();
+    ldc.renderer = new THREE.WebGLRenderer({antialias:true});
     ldc.renderer.setClearColor(0xEEEEEE);
     ldc.renderer.setSize(window.innerWidth, window.innerHeight);
     ldc.renderer.shadowMapEnabled = true;

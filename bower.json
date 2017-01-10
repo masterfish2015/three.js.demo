@@ -1,0 +1,25 @@
+{
+  "name": "threejs_teach",
+  "description": "how the three.js works",
+  "main": "server.js",
+  "authors": [
+    "ldc"
+  ],
+  "license": "MIT",
+  "keywords": [
+    "three.js",
+    "teach"
+  ],
+  "homepage": "https://github.com/masterfish2015/three.js.demo",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "threex.windowresize": "*",
+    "threex.domevents": "*"
+  }
+}
