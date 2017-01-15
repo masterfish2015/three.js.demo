@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>PCB test</title>
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- style css -->
+    <link rel="stylesheet" type="text/css" href="node_modules/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" type="text/css" href="node_modules/bootstrap-select/dist/css/bootstrap-select.min.css">
+    <link rel="stylesheet" type="text/css" href="css/style.css" />
+
+    <!-- javascript -->
+    <script src="node_modules/jquery/dist/jquery.min.js"></script>
+    <script src="node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
+    <script src="node_modules/bootstrap-select/dist/js/bootstrap-select.min.js"></script>
+    <script src="node_modules/three/three.min.js"></script>
+    <script src="node_modules/three/examples/js/libs/stats.min.js"></script>
+    <script src="node_modules/three/examples/js/libs/dat.gui.min.js"></script>
+    <script src="node_modules/three/examples/js/controls/OrbitControls.js"></script>
+    <script src="bower_components/threex.windowresize/threex.windowresize.js"></script>
+    <script src="bower_components/threex.domevents/threex.domevents.js"></script>
+    <script src="js/pcb_test.js"></script>
+</head>
+
+<body>
+    <h1>电路板可制造性（DFM）检测</h1>
+    <hr>
+    <select class="selectpicker" id="pcb-file-select">
+        <option value="exam2">例子1</option>
+        <option value="exam3">例子2</option>
+    </select>
+    <button id="load_pcb_btn" class="btn btn-info" onclick="load_pcb_data()">Load PCB Data.</button>
+    <button id="draw_pcb_btn" class="btn btn-default" disabled ="disabled" onclick="draw_pcb()">Draw PCB.</button>
+    <hr>
+    <h2>电子元器件数据</h2>
+    <div id="components-table"></div>
+    <hr>
+    <h2>焊盘数据</h2>
+    <div id="pad-table"></div>
+    <hr>
+    <h2>电路板数据</h2>
+    <div id="outline-table"></div>
+    <hr>
+    <div id="webgl-output"></div>
+    <div id="stats-output"></div>
+</body>
+
+</html>
