@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>PCB analysis</title>
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+
+    <!-- style css -->
+    <link rel="stylesheet" type="text/css" href="node_modules/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" type="text/css" href="css/style.css" />
+
+    <!-- javascript -->
+    <script src="node_modules/jquery/dist/jquery.min.js"></script>
+    <script src="node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
+    <script src="node_modules/three/three.min.js"></script>
+    <script src="node_modules/three/examples/js/libs/stats.min.js"></script>
+    <script src="node_modules/three/examples/js/libs/dat.gui.min.js"></script>
+    <script src="node_modules/three/examples/js/controls/OrbitControls.js"></script>
+    <script src="node_modules/three/libs/threex.windowresize.js"></script>
+    <script src="js/PCB_main.js"></script>
+  </head>
+
+  <body>
+    <h1>PCB 解析</h1>
+    <hr>
+    <div class="container-fluid">
+      <div class="row">
+        <div id="sidebar" class="container-fluid col-sm-2">
+          <ul class="nav nav-tabs nav-stacked" data-spy="affix" data-offset-top="195">
+            <li><a href="#section-introduction">Introduction</a></li>
+            <li><a href="#section-structure">The structure of a PCB ASCII file</a></li>
+            <li><a href="#section-defaults">Defaults Section</a></li>
+            <li><a href="#section-PCB-Objects">PCB Objects Section</a></li>
+          </ul>
+        </div>
+        <div id="content" class="col-sm-10">
+          <h2 id="section-introduction">Introduction | 简介</h2>
+          <p>The Design Explorer 99 SE’s PCB editor provides different file format options when saving Protel PCB documents. The default binary format generates a compact database, which loads and saves PCB data efficiently. </p>
+          <p><mark>Protel 99 SE在保存文件的时候提供了不同的格式选择。缺省的二进制格式是一种紧凑的数据库格式，可以对文件进行高效的存取。</mark></p>
+          <p>Documents are also saved in a Protel ASCII text format. In this document, the ASCII PCB file format for Protel PCB 99 SE will only be documented.</p>
+          <p><mark>Proel文件也可以以ASCII的格式进行保存，本文中仅对ASCII格式的文件内容进行解析。</mark></p>
+          <p>The PCB editor uses a 32 bit design database and can generate through hole and SMD designs of up to 32 signal layers, plus 16 midlayer power planes. There are 16 mechanical drawing layers which allow you to generate fabrication and assembly
+            drawings for your design.</p>
+          <p><mark>软件使用32位的设计数据库，能够生成<b>通孔安装</b>和<b>表面安装</b>类型的电路板设计，最多可以到32层的信号层，加上最多16层的电源中间层，最多16层的机械图层以方便你生成加工和组装时的生产文件。</mark></p>
+          <p>The boards can be as big as 100 inches by 100 inches. The Placement accuracy on the 0.001 mils grid system is ± 0.0005 mils. Prior to the Design Explorer 99SE, there were up to 16 signal layers, 4 midlayer power planes and 4 mechanical drawing
+            layers.
+          </p>
+          <p><mark>电路板最大设计面积是100英寸X100英寸，放置精度在0.001mil的栅格定位系统，误差在± 0.0005 mil。之前的版本仅能提供16个信号层，4个中间电源层，4个机械图层。</mark></p>
+
+          <dl class="dl-horizontal">
+            <dt>Signal layers  <br> 信号层</dt>
+            <dd>There are 32 signal layers that can be used for track placement. Anything placed on these layers will be plotted as solid (copper) areas on the PCB. <br> <mark>最多有32层的信号层可以放置导线，任何绘制到这些层的图形都会绘制到电路板的铜箔层上。单面板以顶层（Top layer）画线路层（Signal layer），则表示该层线路为正视面。单面板以底层（Bottom layer）画线路层（Signal layer），则表示该层线路为透视面。top layer为正视图，bottom layer为透视图顶层字符为正，而底层字符为反。</mark>
+            </dd>
+          </dl>
+
+          <dl class="dl-horizontal">
+            <dt>Internal Planes <br>内部（电源）层</dt>
+            <dd>Sixteen layers (named Internal Plane 1–16) are available for use as power planes. Nets can be assigned to these layers and multilayer pads and vias automatically connect to these planes. <br> <mark>最多16层的（以Internal Plane 1-16 命名)内部电源层，信号连接网格可以连接到这些层，多层的焊盘和孔都自动连接到这些图层。</mark></dd>
+          </dl>
+
+          <dl class="dl-horizontal">
+            <dt>SilkScreen layers <br>丝印层 </dt>
+            <dd>Top and Bottom Silkscreen layers are typically used to display component outlines and component text (designator and comment fields that are part of the component description). <br> <mark>Top（顶）丝印层 和 Bottom（底）丝印层主要用来显示元器件的外形和元器件的描述文字（设计标示和注释文字等）。</mark></dd>
+          </dl>
+
+          <dl class="dl-horizontal">
+            <dt> Mechanical Layers <br>机械图层</dt>
+            <dd>Sixteen mechanical drawing layers are provided for fabrication and assembly details such as dimensions, alignment targets, annotation or other details. Mechanical layer items can be automatically added to other layers when printing or plotting
+              artwork. Mechanical Layer names are user definable. <br><mark>最多16层的机械图层可以提供生产和装配用的细节，比如尺寸、对齐等信息。机械图层的名字可以由用户定义，其信息可以打印到其他图层上。 </mark></dd>
+          </dl>
+
+          <dl class="dl-horizontal">
+            <dt>Solder Mask <br>阻焊层</dt>
+            <dd>Top and bottom masks are provided for creating the artwork used to make the solder masks.<br> <mark>Top和Bottom助焊层可以为制作焊点掩模提供参考图形。阻焊层为(Solder mask) 用来开窗不上绿油。<br> 极个别客户用 multilayer 层以为能做出焊盘的焊盘（两层线路而且开窗的效果） 这是不对的，如果要开窗同样要加上助焊层solder层 </mark></dd>
+          </dl>
+
+          <dl class="dl-horizontal">
+            <dt>Paste Masks <br>钢网层 </dt>
+            <dd>Top and bottom masks are provided to generate the artwork which is used to manufacture stencils to deposit solder paste onto surface mount pads on PCBs with surface mount devices (SMDs).<br><mark> Top和Bottom钢网层主要是为SMT（表面组装技术）中焊膏涂覆工艺中的钢网制作焊膏掩模提供参考图形。</mark></dd>
+          </dl>
+
+          <dl class="dl-horizontal">
+            <dt>Drill Drawing <br> 钻孔图层 </dt>
+            <dd>Coded plots of board hole locations typically used to create a drilling drawing that shows a unique symbol for each hole size at each hole location. Individual layer pair plots are provided when blind/buried vias are specified. Three symbol
+              styles are available: coded symbol, alphabetical codes (A, B, C etc.) or the assigned size. <br><mark>
+
+            </mark></dd>
+          </dl>
+
+          <dl class="dl-horizontal">
+            <dt>Drill Guide <br> 钻孔指导层 </dt>
+            <dd>Plots of all holes in the layout - sometimes called pad masters . Individual layer pair plots are provided when blind/buried vias are specified. These plots include all pads and vias with holes greater than zero (0) size.
+              <br><mark>
+
+            </mark></dd>
+          </dl>
+
+          <dl class="dl-horizontal">
+            <dt>Keep Out <br> 保持层 </dt>
+            <dd> This layer is used to define the regions where components and routes can validly be placed. MultiLayer Objects placed on this layer will appear on all copper layers. This is typically used for through hole pads and vias, but other objects
+              can be placed on this layer.<br><mark> 一定要注意在画线的时候不论画在那一层，在线的属性选项中一定不要随便把keepout选项勾，一旦选中了keepout选项，则这根线无法 做出（只要选上了这个选项，则表明禁掉这根线)。<br>当一个文件内板子的外形或非金属槽孔同时存在于两个层，且有冲突的，均以keepout层为准，因为正常导出gerber文件时只能导出keepout层的外形或非金属化槽孔，此点也是经常出现问题的地方。</mark></dd>
+          </dl>
+
+          <dl class="dl-horizontal">
+            <dt> Display Layers <br> </dt>
+            <dd>The system layers described below cannot have objects placed on them but they are turned on or off in the Design>>Options dialog box. <br> <mark></mark></dd>
+          </dl>
+
+          <dl class="dl-horizontal">
+            <dt>DRC Errors <br></dt>
+            <dd>This option controls the display of the Design Rule Check (DRC) error marker.<br><mark></mark> </dd>
+          </dl>
+
+          <dl class="dl-horizontal">
+            <dt>Visible Grids <br> </dt>
+            <dd>Controls the display of the two visible grids.<br><mark> </mark></dd>
+          </dl>
+
+          <dl class="dl-horizontal">
+            <dt>Pad and Via Holes <br> </dt>
+            <dd>Controls the display of pad and via holes. To be able to distinguish pads from vias in draft mode, pad holes are outlined in the current Pad Holes colour (set in the Colours Tab of the Preferences dialog box).<br><mark> </mark></dd>
+          </dl>
+
+          <dl class="dl-horizontal">
+            <dt>Connect <br> </dt>
+            <dd>This option controls the display of the connection lines. The PCB editor displays connection lines wherever it locates part of a net that is unrouted.<br> <mark></mark></dd>
+          </dl>
+
+          <hr>
+          <h2 id="section-structure">The structure of a PCB ASCII file</h2>
+          <h2 id="section-defaults">Defaults Section</h2>
+          <h2 id="section-PCB-Objects">PCB Objects Section</h2>
+        </div>
+      </div>
+    </div>
+    <div id="webgl-output"></div>
+    <div id="stats-output"></div>
+  </body>
+
+</html>
