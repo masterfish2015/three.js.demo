@@ -433,7 +433,7 @@ function _draw_pcb_wire(wire) {
     shape.moveTo(0, width / 2);
     //shape.lineTo(0, -width / 2);
     _draw_shape_arc(shape, 0, 0, width / 2, Math.PI / 2, Math.PI * 3 / 2)
-    //shape.absarc(0, 0, width / 2, Math.PI / 2, -Math.PI / 2, true);
+        //shape.absarc(0, 0, width / 2, Math.PI / 2, -Math.PI / 2, true);
     shape.lineTo(length, -width / 2);
     //_draw_shape_arc(shape, length, 0, width / 2, 3 * Math.PI / 2, 5 * Math.PI / 2)
     //shape.moveTo(length, width / 2);    
