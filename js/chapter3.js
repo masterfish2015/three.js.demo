@@ -115,8 +115,6 @@ $(function() {
         0.1,
         1000);
     ldc.renderer = new THREE.WebGLRenderer({antialias:true});
-
-        20000);
     ldc.renderer = new THREE.WebGLRenderer({ antialias: true });
     ldc.renderer.setClearColor(0xEEEEEE);
     ldc.renderer.setSize(window.innerWidth, window.innerHeight);

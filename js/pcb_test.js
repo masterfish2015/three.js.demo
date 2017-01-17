@@ -4,9 +4,9 @@ function load_pcb_data () {
   let filename = $('#pcb-file-select').val()
   let fullname = '../pcb/' + filename + '.pcb'
 
-  ldc['Components']= []
-  ldc['Pads']= []
-  ldc['Outlines']=[]
+  ldc['Components'] = []
+  ldc['Pads'] = []
+  ldc['Outlines'] = []
 
   jQuery.get(fullname, function (data) {
     var lines = data.split('\n')
@@ -194,43 +194,105 @@ function add_pcb_board () {
   ldc.scene.add(ldc.board.mesh)
 }
 
-// 绘制焊盘
-function add_pcb_pad () {
-  let material = new THREE.MeshPhongMaterial({color: 0xcfcfcf})
-  var extrudeSettings = { amount: 10, bevelEnabled: false, bevelSegments: 2, steps: 2, bevelSize: 1, bevelThickness: 1 }
-
-  for (let i in ldc.Pads) {
-    switch (ldc.Pads[i]['SHAPE']) {
-      case 'ROUND': // 圆形的焊盘
-        {
-        break
-      }
-      case 'RECTANGLE': // 方形焊盘
-        {
-        let x = parseFloat(ldc.Pads[i]['X']),
-          y = parseFloat(ldc.Pads[i]['Y']),
-          xsize = parseFloat(ldc.Pads[i]['XSIZE']),
-          ysize = parseFloat(ldc.Pads[i]['YSIZE']),
-          rotation = parseFloat(ldc.Pads[i]['ROTATION'])
-
-        let shape = new THREE.Shape()
-        shape.moveTo(0 - xsize / 2, 0 - ysize / 2)
-        shape.lineTo(0 + xsize / 2, 0 - xsize / 2)
-        shape.lineTo(0 + xsize / 2, 0 + ysize / 2)
-        shape.lineTo(0 - xsize / 2, 0 + ysize / 2)
-        let geo = new THREE.ExtrudeGeometry(shape, extrudeSettings)
-        let pad = new THREE.Mesh(geo, material)
-        pad.rotation.z = rotation * Math.PI / 180.0
-        pad.name = 'pad-' + ldc.Pads[i]['NAME']
-        pad.position.set(x, y, 30)
-        pad.castShadow = true
-        ldc.scene.add(pad)
-        console.log('x:' + x + ',y:' + y + ',xsize:' + xsize + ',ysize:' + ysize + ',angle:' + rotation)
-        break
-      }
+function draw_circle_pad_shape (shape, xsize, ysize, rotation) {
+  if (xsize === ysize) {
+    // 如果两个尺寸相同
+    shape.absarc(0, 0, xsize / 2, 0, Math.PI * 2, false)
+  }else {
+    // 如果不同
+    if (xsize < ysize) {
+      let t = xsize
+      xsize = ysize ; ysize = t
+      rotation.angle += 90
+    }else {
     }
+    let x1 = (xsize - ysize) / 2, y1 = ysize / 2, r = y1
+    shape.moveTo(-x1,y1)
+    shape.absarc(-x1, 0, r, Math.PI / 2, 3*Math.PI / 2, false)
+    shape.moveTo(-x1,-y1)
+    shape.lineTo(x1, -y1)
+    shape.absarc(x1, 0, r,  -Math.PI  / 2, Math.PI / 2, false)
+    shape.moveTo(x1,y1)
+    //shape.lineTo(-x1, -y1)
   }
 }
+
+function draw_rectangle_pad_shape (shape, xsize, ysize, rotation) {
+  shape.moveTo(0 - xsize / 2, 0 - ysize / 2)
+  shape.lineTo(0 + xsize / 2, 0 - xsize / 2)
+  shape.lineTo(0 + xsize / 2, 0 + ysize / 2)
+  shape.lineTo(0 - xsize / 2, 0 + ysize / 2)
+}
+
+function draw_pad_shape_hole (shape, holesize) {
+  if (holesize > 0) {
+    let hole = new THREE.Path()
+    hole.absarc(0, 0, holesize / 2, 0, Math.PI * 2, true)
+    shape.holes.push(hole)
+  }
+}
+
+function draw_pad_mesh (shape, x, y, z, rotation, name, material, extrudeSettings) {
+  let geo = new THREE.ExtrudeGeometry(shape, extrudeSettings)
+  let pad = new THREE.Mesh(geo, material)
+  pad.rotation.z = rotation.angle * Math.PI / 180.0 // 以世界坐标原点进行旋转
+  pad.name = 'pad-' + name
+  pad.position.set(x, y, z)
+  pad.castShadow = true
+  ldc.scene.add(pad)
+}
+
+function draw_pcb_pad (shape, pad) {
+  let xsize_top = 0, ysize_top = 0, xsize_bottom = 0, ysize_bottom = 0 // 多层焊盘尺寸
+  let x = parseFloat(pad['X']), y = parseFloat(pad['Y']),
+    holesize = parseFloat(pad['HOLESIZE']),
+    rotation = {'angle': parseFloat(pad['ROTATION'])}
+  let material = new THREE.MeshPhongMaterial({color: 0xcfcfcf})
+  let extrudeSettings = { amount: 10, bevelEnabled: false, steps: 2}
+  let real_draw_pad_shape = {'ROUND': draw_circle_pad_shape, 'RECTANGLE': draw_rectangle_pad_shape}
+
+  switch (pad['LAYER']) {
+    case 'MULTILAYER': // 多层贯通焊盘，只有一个尺寸
+      {
+      xsize_bottom = xsize_top = parseFloat(pad['XSIZE'])
+      ysize_bottom = ysize_top = parseFloat(pad['YSIZE'])
+      real_draw_pad_shape[pad['SHAPE']](shape, xsize_top, ysize_top, rotation)
+      draw_pad_shape_hole(shape, holesize)
+      extrudeSettings.amount = 50
+      draw_pad_mesh(shape, x, y, -10, rotation, pad['NAME'], material, extrudeSettings)
+    }
+    break
+    case 'TOP': // 只有顶层
+      {
+      xsize_top = parseFloat(pad['TOPXSIZE'])
+      ysize_top = parseFloat(pad['TOPYSIZE'])
+      real_draw_pad_shape[pad['SHAPE']](shape, xsize_top, ysize_top, rotation)
+      draw_pad_shape_hole(shape, holesize)
+      extrudeSettings.amount = 50
+      draw_pad_mesh(shape, x, y, 0, rotation, pad['NAME'], material, extrudeSettings)
+    }
+    break
+    case 'BOTTOM': // 只有底层
+      {
+      xsize_bottom = parseFloat(pad['BOTXSIZE'])
+      ysize_bottom = parseFloat(pad['BOTYSIZE'])
+      real_draw_pad_shape[pad['SHAPE']](shape, xsize_top, ysize_top, rotation)
+      draw_pad_shape_hole(shape, holesize)
+      extrudeSettings.amount = 50
+      draw_pad_mesh(shape, x, y, 0, rotation, pad['NAME'], material, extrudeSettings)
+    }
+    break
+  }
+}
+
+// 绘制焊盘
+function add_pcb_pad () {
+  for (let i in ldc.Pads) {
+    let shape = new THREE.Shape()
+    draw_pcb_pad(shape, ldc.Pads[i])
+  // console.log('x:' + x + ',y:' + y + ',xsize:' + xsize + ',ysize:' + ysize + ',angle:' + rotation)
+  } // end of for
+} // end of function
 
 function draw_pcb () {
   if (ldc.scene === undefined) {
@@ -239,15 +301,13 @@ function draw_pcb () {
     let obj, i
     for (i = ldc.scene.children.length - 1; i >= 0; i--) {
       obj = ldc.scene.children[ i ]
-      if (obj.type === "Mesh") {
+      if (obj.type === 'Mesh') {
         ldc.scene.remove(obj)
       }
     }
   }
   // ldc.ambientLight = new THREE.AmbientLight({color: 0xffffff})
   // ldc.scene.add(ldc.ambientLight)
-
-
 
   if (ldc.renderer === undefined) {
     ldc.camera = new THREE.PerspectiveCamera(45,
