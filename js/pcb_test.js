@@ -1,22 +1,20 @@
-var ldc = { 'Components': [], 'Pads': [], 'Outlines': [] }
+var ldc = {}
 
 function load_pcb_data() {
     let filename = $('#pcb-file-select').val()
     let fullname = '../pcb/' + filename + '.pcb'
 
-    ldc['Components'] = []
-    ldc['Pads'] = []
-    ldc['Outlines'] = []
+    ldc = { 'Components': [], 'Pads': [], 'Outlines': [], 'Wires': [] }
 
     jQuery.get(fullname, function(data) {
-        var lines = data.split('\n')
-        for (var i in lines) { // 每行
-            var properties = lines[i].split('|'); // 每个属性之间用|来分割
-            var obj = {}
+        let lines = data.split('\n')
+        for (let i in lines) { // 每行
+            let properties = lines[i].split('|'); // 每个属性之间用|来分割
+            let obj = {}
             for (var j in properties) {
                 if (properties[j]) { // 如果属性存在
-                    var key, value
-                    var kv = properties[j].split('=')
+                    let key, value
+                    let kv = properties[j].split('=')
                     key = kv[0];
                     value = kv[1]
                         // console.log(key+":"+value)
@@ -42,15 +40,23 @@ function load_pcb_data() {
                         switch (obj['LAYER']) {
                             case 'KEEPOUT':
                                 // case 'MECHANICAL4':
-                                ldc.Outlines.push(obj)
+                                { //这是PCB外轮廓的轮廓线
+                                    ldc.Outlines.push(obj)
+                                }
                                 break
+                            case 'TOP':
+                            case 'BOTTOM':
+                                { //这是导线
+                                    ldc.Wires.push(obj)
+                                }
+                                break;
                         }
                         break
                     }
             }
         }
         // 生成表格
-        // generate_all_table()
+        // _generate_all_table()
 
         // enable draw button
         // $('#load_pcb_btn').attr('disabled', 'disabled').removeClass('btn-info').addClass('btn-default')
@@ -58,9 +64,9 @@ function load_pcb_data() {
     })
 }
 
-function generate_all_table() {
+function _generate_all_table() {
     // --元器件表格
-    generate_table('components-table', ldc.Components, {
+    _generate_table('components-table', ldc.Components, {
             '序号': 'ID',
             '所在图层': 'LAYER',
             '封装类型': 'PATTERN',
@@ -69,7 +75,7 @@ function generate_all_table() {
             '旋转角': 'ROTATION'
         })
         // --焊盘表格
-    generate_table('pad-table', ldc.Pads, {
+    _generate_table('pad-table', ldc.Pads, {
             '所属元器件': 'COMPONENT',
             '所在图层': 'LAYER',
             '类型': 'SHAPE',
@@ -87,7 +93,7 @@ function generate_all_table() {
             '旋转角': 'ROTATION'
         })
         // --电路板表格
-    generate_table('outline-table', ldc.Outlines, {
+    _generate_table('outline-table', ldc.Outlines, {
         '类型': 'RECORD',
         '所在图层': 'LAYER',
         'X1': 'X1',
@@ -108,7 +114,7 @@ function generate_all_table() {
 // tag：表格所在div的id
 // array：表格数据
 // fields：表格域标题：数组中对应的元素key
-function generate_table(tag, array, fields) {
+function _generate_table(tag, array, fields) {
     if (array.length > 0) {
         var str = "<table border='1' class='table'>"
         str += '<tr>'
@@ -134,7 +140,7 @@ function generate_table(tag, array, fields) {
 }
 
 // 绘制电路板外形
-function add_pcb_board() {
+function _add_pcb_board() {
     var shape = new THREE.Shape() // 创建Shape对象，作为电路板的平面截面，后继进行拉伸
     var border_lines = [] // 保存电路板外形的各个边界线
         // 以下循环将各个边界数据放入数组中
@@ -206,7 +212,9 @@ function add_pcb_board() {
     ldc.scene.add(ldc.board.mesh)
 }
 
-function draw_shape_arc(shape, x, y, r, startAngle, endAngle) {
+//辅助函数，绘制圆弧
+//主要是three.js提供的arc函数绘制的曲线无法形成合乎要求的shape以及进行拉伸
+function _draw_shape_arc(shape, x, y, r, startAngle, endAngle) {
     shape.moveTo(x + r * Math.cos(startAngle), y + r * Math.sin(startAngle))
     let step = (endAngle - startAngle) / 10
     for (let ang = startAngle; ang <= endAngle; ang += step) {
@@ -216,7 +224,8 @@ function draw_shape_arc(shape, x, y, r, startAngle, endAngle) {
     }
 }
 
-function draw_circle_pad_shape(shape, xsize, ysize, rotation) {
+//绘制PCB板圆形焊盘的shape
+function _draw_circle_pad_shape(shape, xsize, ysize, rotation) {
     if (xsize === ysize) {
         // 如果两个尺寸相同
         shape.absarc(0, 0, xsize / 2, 0, Math.PI * 2, false)
@@ -233,20 +242,22 @@ function draw_circle_pad_shape(shape, xsize, ysize, rotation) {
             r = x1
         shape.moveTo(x1, -y1)
         shape.lineTo(x1, y1)
-        draw_shape_arc(shape, 0, y1, r, 0, Math.PI)
+        _draw_shape_arc(shape, 0, y1, r, 0, Math.PI)
         shape.lineTo(-x1, -y1)
-        draw_shape_arc(shape, 0, -y1, r, -Math.PI, 0)
+        _draw_shape_arc(shape, 0, -y1, r, -Math.PI, 0)
     }
 }
 
-function draw_rectangle_pad_shape(shape, xsize, ysize, rotation) {
+//绘制PCB板矩形焊盘的shape
+function _draw_rectangle_pad_shape(shape, xsize, ysize, rotation) {
     shape.moveTo(0 - xsize / 2, 0 - ysize / 2)
     shape.lineTo(0 + xsize / 2, 0 - xsize / 2)
     shape.lineTo(0 + xsize / 2, 0 + ysize / 2)
     shape.lineTo(0 - xsize / 2, 0 + ysize / 2)
 }
 
-function draw_pad_shape_hole(shape, holesize) {
+//焊盘开孔
+function _draw_pad_shape_hole(shape, holesize) {
     if (holesize > 0) {
         let hole = new THREE.Path()
         hole.absarc(0, 0, holesize / 2, 0, Math.PI * 2, true)
@@ -254,7 +265,8 @@ function draw_pad_shape_hole(shape, holesize) {
     }
 }
 
-function draw_pad_mesh(shape, x, y, z, rotation, name, material, extrudeSettings) {
+//拉伸焊盘
+function _draw_pad_mesh(shape, x, y, z, rotation, name, material, extrudeSettings) {
     let geo = new THREE.ExtrudeGeometry(shape, extrudeSettings)
     let pad = new THREE.Mesh(geo, material)
     pad.rotation.z = rotation.angle * Math.PI / 180.0 // 以世界坐标原点进行旋转
@@ -264,7 +276,8 @@ function draw_pad_mesh(shape, x, y, z, rotation, name, material, extrudeSettings
     ldc.scene.add(pad)
 }
 
-function draw_pcb_pad(shape, pad) {
+//绘制实际焊盘（包括绘制外形，开孔，拉伸）
+function _draw_pcb_pad(pad) {
     let xsize_top = 0,
         ysize_top = 0,
         xsize_bottom = 0,
@@ -275,7 +288,10 @@ function draw_pcb_pad(shape, pad) {
         rotation = { 'angle': parseFloat(pad['ROTATION']) }
     let material = new THREE.MeshPhongMaterial({ color: 0xcfcfcf })
     let extrudeSettings = { amount: 10, bevelEnabled: false, steps: 2 }
-    let real_draw_pad_shape = { 'ROUND': draw_circle_pad_shape, 'RECTANGLE': draw_rectangle_pad_shape }
+        //下面是根据不同的焊盘形状选择不同绘制函数
+    let real_draw_pad_shape = { 'ROUND': _draw_circle_pad_shape, 'RECTANGLE': _draw_rectangle_pad_shape }
+
+    let shape = new THREE.Shape();
 
     switch (pad['LAYER']) {
         case 'MULTILAYER': // 多层贯通焊盘，只有一个尺寸
@@ -283,9 +299,9 @@ function draw_pcb_pad(shape, pad) {
                 xsize_bottom = xsize_top = parseFloat(pad['XSIZE'])
                 ysize_bottom = ysize_top = parseFloat(pad['YSIZE'])
                 real_draw_pad_shape[pad['SHAPE']](shape, xsize_top, ysize_top, rotation)
-                draw_pad_shape_hole(shape, holesize)
+                _draw_pad_shape_hole(shape, holesize)
                 extrudeSettings.amount = 50
-                draw_pad_mesh(shape, x, y, -10, rotation, pad['NAME'], material, extrudeSettings)
+                _draw_pad_mesh(shape, x, y, -10, rotation, pad['NAME'], material, extrudeSettings)
             }
             break
         case 'TOP': // 只有顶层
@@ -293,9 +309,9 @@ function draw_pcb_pad(shape, pad) {
                 xsize_top = parseFloat(pad['TOPXSIZE'])
                 ysize_top = parseFloat(pad['TOPYSIZE'])
                 real_draw_pad_shape[pad['SHAPE']](shape, xsize_top, ysize_top, rotation)
-                draw_pad_shape_hole(shape, holesize)
+                _draw_pad_shape_hole(shape, holesize)
                 extrudeSettings.amount = 10
-                draw_pad_mesh(shape, x, y, 30, rotation, pad['NAME'], material, extrudeSettings)
+                _draw_pad_mesh(shape, x, y, 30, rotation, pad['NAME'], material, extrudeSettings)
             }
             break
         case 'BOTTOM': // 只有底层
@@ -303,23 +319,24 @@ function draw_pcb_pad(shape, pad) {
                 xsize_bottom = parseFloat(pad['BOTXSIZE'])
                 ysize_bottom = parseFloat(pad['BOTYSIZE'])
                 real_draw_pad_shape[pad['SHAPE']](shape, xsize_bottom, ysize_bottom, rotation)
-                draw_pad_shape_hole(shape, holesize)
+                _draw_pad_shape_hole(shape, holesize)
                 extrudeSettings.amount = 10
-                draw_pad_mesh(shape, x, y, -10, rotation, pad['NAME'], material, extrudeSettings)
+                _draw_pad_mesh(shape, x, y, -10, rotation, pad['NAME'], material, extrudeSettings)
             }
             break
     }
 }
 
 // 绘制焊盘
-function add_pcb_pad() {
+function _add_pcb_pad() {
     for (let i in ldc.Pads) {
         let shape = new THREE.Shape()
-        draw_pcb_pad(shape, ldc.Pads[i])
+        _draw_pcb_pad(ldc.Pads[i])
             // console.log('x:' + x + ',y:' + y + ',xsize:' + xsize + ',ysize:' + ysize + ',angle:' + rotation)
     } // end of for
 } // end of function
 
+//绘制电路板
 function draw_pcb() {
     if (ldc.scene === undefined) {
         ldc.scene = new THREE.Scene()
@@ -364,8 +381,9 @@ function draw_pcb() {
         ldc.scene.add(ldc.spotLight2)
     }
 
-    add_pcb_board(); // 绘制PCB板外形
-    add_pcb_pad()
+    _add_pcb_board(); // 绘制PCB板外形
+    _add_pcb_pad(); //绘制焊盘
+    _add_pcb_wire(); // 绘制导线
 
     // var spotLightHelper = new THREE.SpotLightHelper(ldc.spotLight)
     // ldc.scene.add(spotLightHelper)
@@ -373,17 +391,83 @@ function draw_pcb() {
     ldc.camera.position.set(0, 0, 10000)
     ldc.camera.lookAt(ldc.scene.position)
 
-    renderScene()
+    _renderScene()
 }
 
-function renderScene() {
+//绘制PCB板上的导线
+function _add_pcb_wire() {
+    for (let i in ldc.Wires) {
+        if (ldc.Wires[i]['RECORD'] === 'Track')
+            _draw_pcb_wire(ldc.Wires[i]);
+    }
+}
+
+//实际绘制导线
+var _material = new THREE.MeshPhongMaterial({ color: 0xcfcfcf });
+var _extrudeSettings = { amount: 10, bevelEnabled: false, steps: 2 };
+
+function _draw_pcb_wire(wire) {
+    let shape = new THREE.Shape();
+    let x1 = parseFloat(wire['X1']),
+        y1 = parseFloat(wire['Y1']),
+        x2 = parseFloat(wire['X2']),
+        y2 = parseFloat(wire['Y2']),
+        width = parseFloat(wire['WIDTH']);
+
+    let xa, ya, xb, yb, xc, yc, xd, yd;
+
+    if (x1 > x2) {
+        xa = x2;
+        ya = y2;
+        xb = x1;
+        yb = y1;
+    } else {
+        xa = x1;
+        ya = y1;
+        xb = x2;
+        yb = y2;
+    }
+
+    let length = Math.sqrt((xa - xb) * (xa - xb) + (ya - yb) * (ya - yb));
+
+    shape.moveTo(0, width / 2);
+    //shape.lineTo(0, -width / 2);
+    _draw_shape_arc(shape, 0, 0, width / 2, Math.PI / 2, Math.PI * 3 / 2)
+    //shape.absarc(0, 0, width / 2, Math.PI / 2, -Math.PI / 2, true);
+    shape.lineTo(length, -width / 2);
+    //_draw_shape_arc(shape, length, 0, width / 2, 3 * Math.PI / 2, 5 * Math.PI / 2)
+    //shape.moveTo(length, width / 2);    
+    //shape.lineTo(length, +width / 2);
+    shape.absarc(length, 0, width / 2, -Math.PI / 2, Math.PI / 2, true);
+    shape.lineTo(0, width / 2)
+
+    let geo = new THREE.ExtrudeGeometry(shape, _extrudeSettings);
+    let mesh = new THREE.Mesh(geo, _material);
+    mesh.rotation.z = Math.asin((yb - ya) / length);
+
+    let z = 30;
+    switch (wire['LAYER']) {
+        case 'TOP':
+            z = 30;
+            break;
+        case 'BOTTOM':
+            z = -10;
+            break;
+    }
+    mesh.position.set(xa, ya, z);
+
+    ldc.scene.add(mesh)
+
+}
+
+function _renderScene() {
     ldc.orbit.update()
-    requestAnimationFrame(renderScene)
+    requestAnimationFrame(_renderScene)
     ldc.renderer.render(ldc.scene, ldc.camera)
 }
 
 // 辅助函数，去除数组中的重复元素
-function unique(array) {
+function _unique(array) {
     var r = []
     for (var i = 0, l = array.length; i < l; i++) {
         for (var j = i + 1; j < l; j++)
