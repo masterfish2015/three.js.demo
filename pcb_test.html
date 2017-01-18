@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 
-<head>
+  <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>PCB test</title>
@@ -24,30 +24,47 @@
     <script src="bower_components/threex.windowresize/threex.windowresize.js"></script>
     <script src="bower_components/threex.domevents/threex.domevents.js"></script>
     <script src="js/pcb_test.js"></script>
-</head>
+  </head>
 
-<body>
+  <body>
     <h1>电路板可制造性（DFM）检测</h1>
     <hr>
-    <select class="selectpicker" id="pcb-file-select">
-        <option value="exam2">例子1</option>
-        <option value="exam3">例子2</option>
-    </select>
-    <button id="load_pcb_btn" class="btn btn-info" onclick="load_pcb_data()">Load PCB Data.</button>
-    <button id="draw_pcb_btn" class="btn btn-default" disabled ="disabled" onclick="draw_pcb()">Draw PCB.</button>
-    <hr>
-    <!-- <h2>电子元器件数据</h2>
-    <div id="components-table"></div>
-    <hr>
-    <h2>焊盘数据</h2>
-    <div id="pad-table"></div>
-    <hr>
-    <h2>电路板数据</h2>
-    <div id="outline-table"></div>
-    <hr>
-    -->
-    <div id="webgl-output"></div>
-    <div id="stats-output"></div>
-</body>
+    <div class="container-fluid">
+      <div class="row">
+        <div id="function-field" class="col-xs-2">
+          <div class="progress">
+            <div id="status-bar" class="progress-bar" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100" style="width: 0%;">
+              <span id="status-bar-text"></span>
+            </div>
+          </div>
+          <select class="selectpicker" id="pcb-file-select">
+                <option value="exam2">例子1</option>
+                <option value="exam3">例子2</option>
+            </select>
+          <hr>
+          <button id="load_pcb_btn" class="btn btn-info btn-block" onclick="load_pcb_data()">Load PCB Data.</button>
+          <button id="draw_pcb_btn" class="btn btn-default btn-block" disabled="disabled" onclick="draw_pcb()">Draw PCB.</button>
+          <hr>
+          <!-- <h2>电子元器件数据</h2>
+            <div id="components-table"></div>
+            <hr>
+            <h2>焊盘数据</h2>
+            <div id="pad-table"></div>
+            <hr>
+            <h2>电路板数据</h2>
+            <div id="outline-table"></div>
+            <hr>
+            -->
+        </div>
+
+        <div id="draw-field" class="col-xs-10">
+          <div id="webgl-output"></div>
+          <div id="stats-output"></div>
+        </div>
+      </div>
+    </div>
+
+
+  </body>
 
 </html>
