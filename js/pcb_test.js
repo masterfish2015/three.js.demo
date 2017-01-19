@@ -4,7 +4,7 @@ function load_pcb_data() {
     let filename = $('#pcb-file-select').val()
     let fullname = '../pcb/' + filename + '.pcb'
 
-    ldc = { holder: {}, 'Components': [], 'Pads': [], 'Outlines': [], 'Wires': [], 'Vias': [] }
+    ldc = { holder: {}, Components: [], Pads: [], Outlines: [], Wires: [], Vias: [], Overlay: [] }
 
     jQuery.get(fullname, function(data) {
         let lines = data.split('\n')
@@ -51,7 +51,13 @@ function load_pcb_data() {
                                     ldc.Wires.push(obj)
                                 }
                                 break;
-                        }
+                            case 'TOPOVERLAY':
+                            case 'BOTTOMOVERLAY':
+                                { //这是丝印图形
+                                    ldc.Overlay.push(obj);
+                                }
+                                break;
+                        } //---end of switch
                     }
                     break
                 case 'Via':
@@ -249,11 +255,108 @@ function draw_pcb() {
 
 */
 var _copper_material = new THREE.MeshPhongMaterial({ color: "rgb(191,173,111)" });
+var _overlay_material = new THREE.MeshNormalMaterial({ color: "rgb(0,0,250)" });
 var _extrudeSettings = { amount: 10, bevelEnabled: false, steps: 2 };
 
 //绘制丝印图形
 function _add_pcb_overlay() {
+    for (let i in ldc.Overlay) {
+        switch (ldc.Overlay[i]['RECORD']) {
+            case 'Track': // 
+                {
+                    _draw_pcb_overlay_track(ldc.Overlay[i]);
+                }
+                break;
+            case 'Arc':
+                {
+                    _draw_pcb_overlay_arc(ldc.Overlay[i]);
+                }
+        }
+    }
+}
 
+var _line_material = new THREE.LineBasicMaterial({ color: "rgb(0,0,255)", lineWidth: 0 });
+
+//实际绘制直线丝印图形
+function _draw_pcb_overlay_track(track) {
+    let shape = _draw_pcb_shape_line(track)
+    let geo = new THREE.ShapeGeometry(shape);
+    let mesh = new THREE.Mesh(geo, _overlay_material);
+    let z = 0;
+    switch (track['LAYER']) {
+        case 'TOPOVERLAY':
+            z = 30;
+            break;
+        case 'BOTTOMOVERLAY':
+            z = 0;
+            break;
+    }
+    mesh.position.set(shape.cx, shape.cy, z);
+    mesh.rotation.z = shape.rotation;
+
+    ldc.holder.add(mesh);
+
+    /*
+    let x1 = parseFloat(track['X1']),
+        x2 = parseFloat(track['X2']),
+        y1 = parseFloat(track['Y1']),
+        y2 = parseFloat(track['Y2']),
+        width = parseFloat(track['WIDTH']);
+
+    let geo = new THREE.Geometry();
+    geo.vertices.push(new THREE.Vector3(x1, y1, 30));
+    geo.vertices.push(new THREE.Vector3(x2, y2, 30));
+
+    let line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: "rgb(0,0,255)", linewidth: width }));
+    ldc.holder.add(line);
+    */
+}
+
+//绘制圆弧丝印图形
+function _draw_pcb_overlay_arc(arc) {
+    let x = parseFloat(arc['LOCATION.X']),
+        y = parseFloat(arc['LOCATION.Y']),
+        r = parseFloat(arc['RADIUS']),
+        start_angle = parseFloat(arc['STARTANGLE']),
+        end_angle = parseFloat(arc['ENDANGLE']),
+        width = parseFloat(arc['WIDTH']);
+
+    let shape = new THREE.Shape();
+    let cos_start_ang = Math.cos(start_angle * Math.PI / 180.0),
+        sin_start_ang = Math.sin(start_angle * Math.PI / 180.0),
+        cos_end_ang = Math.cos(end_angle * Math.PI / 180),
+        sin_end_ang = Math.sin(end_angle * Math.PI / 180);
+
+    let x1 = (r - width / 2) * cos_start_ang,
+        x2 = (r + width / 2) * cos_start_ang,
+        x3 = (r - width / 2) * cos_end_ang,
+        x4 = (r + width / 2) * cos_end_ang,
+        y1 = (r - width / 2) * sin_start_ang,
+        y2 = (r + width / 2) * sin_start_ang,
+        y3 = (r - width / 2) * sin_end_ang,
+        y4 = (r + width / 2) * sin_end_ang;
+
+    shape.moveTo(0, 0);
+    shape.absarc(0, 0, r + width / 2, start_angle * Math.PI / 180, end_angle * Math.PI / 180, false);
+    shape.lineTo(x4, y4);
+    shape.absarc(0, 0, r - width / 2, start_angle * Math.PI / 180, end_angle * Math.PI / 180, false);
+    shape.lineTo(x2, y2);
+
+    let geo = new THREE.ShapeGeometry(shape);
+    let mesh = new THREE.Mesh(geo, _overlay_material);
+    let z = 0;
+    switch (arc['LAYER']) {
+        case 'TOPOVERLAY':
+            z = 30;
+            break;
+        case 'BOTTOMOVERLAY':
+            z = 0;
+            break;
+    }
+    mesh.position.set(x, y, z);
+    //mesh.rotation.z = ;
+
+    ldc.holder.add(mesh);
 }
 
 //绘制导通孔
@@ -409,18 +512,39 @@ function _draw_pcb_pad(pad) {
 function _add_pcb_wire() {
     for (let i in ldc.Wires) {
         if (ldc.Wires[i]['RECORD'] === 'Track')
-            _draw_pcb_wire(ldc.Wires[i]);
+            _draw_pcb_wire_mesh(_draw_pcb_shape_line(ldc.Wires[i]), ldc.Wires[i]['LAYER']);
     }
 }
 
-//实际绘制导线
-function _draw_pcb_wire(wire) {
+//实际生成导线实体
+function _draw_pcb_wire_mesh(wire_shape, layer) {
+    let geo = new THREE.ExtrudeGeometry(wire_shape, _extrudeSettings);
+    let mesh = new THREE.Mesh(geo, _copper_material);
+    mesh.rotation.z = wire_shape.rotation;
+
+    let z = 30;
+    switch (layer) {
+        case 'TOP':
+            z = 30;
+            break;
+        case 'BOTTOM':
+            z = -10;
+            break;
+    }
+    mesh.position.set(wire_shape.cx, wire_shape.cy, z);
+
+    ldc.holder.add(mesh)
+
+}
+
+//实际绘制直线导线形状
+function _draw_pcb_shape_line(line) {
     let shape = new THREE.Shape();
-    let x1 = parseFloat(wire['X1']),
-        y1 = parseFloat(wire['Y1']),
-        x2 = parseFloat(wire['X2']),
-        y2 = parseFloat(wire['Y2']),
-        width = parseFloat(wire['WIDTH']);
+    let x1 = parseFloat(line['X1']),
+        y1 = parseFloat(line['Y1']),
+        x2 = parseFloat(line['X2']),
+        y2 = parseFloat(line['Y2']),
+        width = parseFloat(line['WIDTH']);
 
     let xa, ya, xb, yb, xc, yc, xd, yd;
 
@@ -449,23 +573,11 @@ function _draw_pcb_wire(wire) {
     shape.absarc(length, 0, width / 2, -Math.PI / 2, Math.PI / 2, true);
     shape.lineTo(0, width / 2)
 
-    let geo = new THREE.ExtrudeGeometry(shape, _extrudeSettings);
-    let mesh = new THREE.Mesh(geo, _copper_material);
-    mesh.rotation.z = Math.asin((yb - ya) / length);
+    shape.rotation = Math.asin((yb - ya) / length);
+    shape.cx = xa;
+    shape.cy = y1;
 
-    let z = 30;
-    switch (wire['LAYER']) {
-        case 'TOP':
-            z = 30;
-            break;
-        case 'BOTTOM':
-            z = -10;
-            break;
-    }
-    mesh.position.set(xa, ya, z);
-
-    ldc.holder.add(mesh)
-
+    return shape;
 }
 
 // 绘制电路板外形
