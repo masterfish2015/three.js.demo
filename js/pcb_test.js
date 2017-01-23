@@ -37,6 +37,7 @@ function load_pcb_data() {
                 case 'Fill':
                 case 'Track':
                 case 'Arc':
+                case 'Text':
                     {
                         switch (obj['LAYER']) {
                             case 'KEEPOUT':
@@ -51,8 +52,8 @@ function load_pcb_data() {
                                     ldc.Wires.push(obj)
                                 }
                                 break
-                            case 'MECHANICAL4':
-                            case 'MECHANICAL1':
+                                //case 'MECHANICAL4':
+                                //case 'MECHANICAL1':
                             case 'TOPOVERLAY':
                             case 'BOTTOMOVERLAY':
                                 { // 这是丝印图形
@@ -257,7 +258,7 @@ function draw_pcb() {
 
 */
 var _copper_material = new THREE.MeshPhongMaterial({ color: 'rgb(191,173,111)' })
-var _overlay_material = new THREE.MeshNormalMaterial({ color: 'rgb(0,0,250)' })
+var _overlay_material = new THREE.MeshNormalMaterial({ color: 'rgb(255,0,250)' })
 var _extrudeSettings = { amount: 10, bevelEnabled: false, steps: 2 }
 
 // 绘制丝印图形
@@ -281,12 +282,6 @@ var _line_material = new THREE.LineBasicMaterial({ color: 'rgb(255,255,0)', line
 
 // 实际绘制直线丝印图形
 function _draw_pcb_overlay_track(track) {
-    let x1 = parseFloat(track['X1']),
-        x2 = parseFloat(track['X2']),
-        y1 = parseFloat(track['Y1']),
-        y2 = parseFloat(track['Y2']),
-        width = parseFloat(track['WIDTH'])
-
     let z = 30
     switch (track['LAYER']) {
         case 'TOPOVERLAY':
@@ -297,24 +292,17 @@ function _draw_pcb_overlay_track(track) {
             break
     }
 
-    let geo = new THREE.Geometry()
-    geo.vertices.push(new THREE.Vector3(x1, y1, z))
-    geo.vertices.push(new THREE.Vector3(x2, y2, z))
-
-    let line = new THREE.Line(geo, _line_material);
-    ldc.holder.add(line)
-
+    let shape = _draw_pcb_shape_line(track);
+    _extrudeSettings.amount = 1;
+    let geo = new THREE.ExtrudeGeometry(shape, _extrudeSettings);
+    let mesh = new THREE.Mesh(geo, _overlay_material);
+    mesh.position.set(shape.cx, shape.cy, z);
+    mesh.rotation.z = shape.rotation;
+    ldc.holder.add(mesh);
 }
 
 // 绘制圆弧丝印图形
 function _draw_pcb_overlay_arc(arc) {
-    let xc = parseFloat(arc['LOCATION.X']),
-        yc = parseFloat(arc['LOCATION.Y']),
-        r = parseFloat(arc['RADIUS']),
-        start_angle = parseFloat(arc['STARTANGLE']),
-        end_angle = parseFloat(arc['ENDANGLE']),
-        width = parseFloat(arc['WIDTH']);
-
     let z = 30
     switch (arc['LAYER']) {
         case 'TOPOVERLAY':
@@ -324,20 +312,14 @@ function _draw_pcb_overlay_arc(arc) {
             z = 0
             break
     }
+    let shape = _draw_pcb_shape_arc(arc);
 
-    let geo = new THREE.Geometry();
-    let step = (end_angle - start_angle) / 6;
-    if (start_angle < end_angle) {
-        for (let angle = start_angle; angle <= end_angle; angle += step) {
-            let x = xc + r * Math.cos(angle * Math.PI / 180.0),
-                y = yc + r * Math.sin(angle * Math.PI / 180.0);
+    _extrudeSettings.amount = 1;
+    let geo = new THREE.ExtrudeGeometry(shape, _extrudeSettings);
+    let mesh = new THREE.Mesh(geo, _overlay_material);
+    mesh.position.set(shape.cx, shape.cy, z);
+    ldc.holder.add(mesh);
 
-            geo.vertices.push(new THREE.Vector3(x, y, z));
-        }
-    }
-    let mesh = new THREE.Line(geo, _line_material);
-
-    ldc.holder.add(mesh)
 }
 
 // 绘制导通孔
@@ -499,8 +481,16 @@ function _draw_pcb_pad(pad) {
 // 绘制PCB板上的导线
 function _add_pcb_wire() {
     for (let i in ldc.Wires) {
-        if (ldc.Wires[i]['RECORD'] === 'Track')
-            _draw_pcb_wire_mesh(_draw_pcb_shape_line(ldc.Wires[i]), ldc.Wires[i]['LAYER'])
+
+        switch (ldc.Wires[i]['RECORD']) {
+            case 'Track':
+                _draw_pcb_wire_mesh(_draw_pcb_shape_line(ldc.Wires[i]), ldc.Wires[i]['LAYER']);
+                break;
+            case 'Arc':
+                _draw_pcb_wire_mesh(_draw_pcb_shape_arc(ldc.Wires[i]), ldc.Wires[i]['LAYER']);
+                break;
+        }
+
     }
 }
 
@@ -508,7 +498,7 @@ function _add_pcb_wire() {
 function _draw_pcb_wire_mesh(wire_shape, layer) {
     let geo = new THREE.ExtrudeGeometry(wire_shape, _extrudeSettings)
     let mesh = new THREE.Mesh(geo, _copper_material)
-    mesh.rotation.z = wire_shape.rotation
+    mesh.rotation.z = wire_shape.rotation || 0;
 
     let z = 30
     switch (layer) {
@@ -524,7 +514,36 @@ function _draw_pcb_wire_mesh(wire_shape, layer) {
     ldc.holder.add(mesh)
 }
 
-// 实际绘制直线导线形状
+// 实际绘制圆弧形状
+function _draw_pcb_shape_arc(arc) {
+    let xc = parseFloat(arc['LOCATION.X']),
+        yc = parseFloat(arc['LOCATION.Y']),
+        r = parseFloat(arc['RADIUS']),
+        start_angle = parseFloat(arc['STARTANGLE']),
+        end_angle = parseFloat(arc['ENDANGLE']),
+        width = parseFloat(arc['WIDTH']);
+
+    let shape = new THREE.Shape();
+    let r_min = r - width / 2,
+        r_max = r + width / 2,
+        cos_start_angle = Math.cos(start_angle * Math.PI / 180.0),
+        cos_end_angle = Math.cos(end_angle * Math.PI / 180.0),
+        sin_start_angle = Math.sin(start_angle * Math.PI / 180.0),
+        sin_end_angle = Math.sin(end_angle * Math.PI / 180.0);
+
+    shape.moveTo(r_min * cos_start_angle, r_min * sin_start_angle);
+    shape.lineTo(r_max * cos_start_angle, r_max * sin_start_angle);
+    shape.absarc(0, 0, r_max, start_angle * Math.PI / 180.0, end_angle * Math.PI / 180.0, true);
+    shape.moveTo(r_max * cos_end_angle, r_max * sin_end_angle);
+    shape.lineTo(r_min * cos_end_angle, r_min * sin_end_angle);
+    shape.absarc(0, 0, r - width / 2, end_angle * Math.PI / 180.0, start_angle * Math.PI / 180.0, true);
+    shape.cx = xc;
+    shape.cy = yc;
+
+    return shape;
+
+}
+// 实际绘制直线形状
 function _draw_pcb_shape_line(line) {
     let shape = new THREE.Shape()
     let x1 = parseFloat(line['X1']),
@@ -562,7 +581,7 @@ function _draw_pcb_shape_line(line) {
 
     shape.rotation = Math.asin((yb - ya) / length)
     shape.cx = xa
-    shape.cy = y1
+    shape.cy = ya
 
     return shape
 }
